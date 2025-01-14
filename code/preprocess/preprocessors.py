@@ -57,6 +57,7 @@ class PreprocessStream:
             event_stream, 
             dtype=[('x', '<i4'), ('y', '<i4'), ('t', '<i4'), ('p', '<i4')]
             )
+        event_stream.sort(order='t')
         return event_stream
     
     def plot_raster(self, event_stream):
