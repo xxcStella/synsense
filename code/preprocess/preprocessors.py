@@ -34,7 +34,8 @@ class PreprocessStream:
 
     def crop_spatial_temporal(self, data) -> np.ndarray:
         """
-        crop in spatial and temporal spaces. 
+        crop in spatial and temporal spaces. Only remains data in the square and within the time length.
+        
         Return:
             event_stream: ndarray containing tuple with data type xytp.
         """
