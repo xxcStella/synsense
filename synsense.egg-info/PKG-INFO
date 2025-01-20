@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: synsense
+Version: 0.1.0
+Summary: Pipeline lib for Sinabs and deployment on board.
+Author-email: xxc <xingchen.xu@bristol.ac.uk>
+Requires-Python: >=3.8
+Requires-Dist: numpy>=1.20
+Requires-Dist: torch>=1.10
