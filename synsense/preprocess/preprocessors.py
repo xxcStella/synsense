@@ -1,6 +1,9 @@
-# import os
+"""
+This file contains preprocessor class. They are used to preprocess different
+data initial format.
+"""
+
 import numpy as np
-# import pickle
 import matplotlib.pyplot as plt
 from typing import Tuple
 

@@ -1,6 +1,15 @@
+"""
+This file contains different useful functions to make your preprocessing 
+much easier.
+"""
+
 import os
 import re
 import shutil
+import numpy as np
+from typing import Tuple
+from .preprocessors import PreprocessStream
+from .parallelProcessing import load_single_sample
 
 def rename_files(folder_absPath: str, pose_mapping: dict) -> None:
     """
@@ -51,3 +60,48 @@ def batch_move_files(root: str, dst: str) -> None:
         file_absPath = os.path.join(root, file)
         shutil.copy(file_absPath, dst)
     print("Finished.")
+
+def plot_spike_raster(
+        file_absPath: str,
+        plot_method: int,
+        gridsize: Tuple[int, int],
+        leftTop: Tuple[int, int],
+        rightBottom: Tuple[int, int],
+        period: Tuple[int, int]
+    ) -> None:
+    """
+    Easily plot the spike raster plot with only 1 function!
+
+    Params:
+        file_absPath (str): the absolute path of the file.
+        plot_method (int): 1 means original data and plot it; 2 means\
+                original data and plot after preprocess raster; 3\
+                means preprocessed data and plot it.
+        gridsize (int, int): Same as in PreprocessStream class.
+        leftTop (int, int): Same as in PreprocessStream class.
+        rightBottom (int, int): Same as in PreprocessStream class.
+        period (int, int): Same as in PreprocessStream class.
+    """
+    processor = PreprocessStream(gridsize, leftTop, rightBottom, period)
+    data = load_single_sample(file_absPath)
+
+    if plot_method == 1:
+        processor.plot_raster(data, True)
+    elif plot_method == 2:
+        stream_after_process = processor.crop_spatial_temporal(data)
+        processor.plot_raster(stream_after_process, False)
+    elif plot_method == 3:
+        processor.plot_raster(data, False)
+    else:
+        raise ValueError("plot_method parameter can only be 1, 2 or 3.")
+    
+def preprocess_single_file_without_saving(
+        file_absPath: str, 
+        processor: PreprocessStream
+    ) -> None:
+    """
+    preprocess single file and return it in xytp form in a 1D ndarray.
+    """
+    data_sample = load_single_sample(file_absPath)
+    event_stream = processor.crop_spatial_temporal(data_sample)
+    return event_stream

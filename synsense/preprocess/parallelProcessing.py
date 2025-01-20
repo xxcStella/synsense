@@ -14,7 +14,7 @@ def make_meta(
         leftTop: Tuple[int, int],
         rightBottom: Tuple[int, int],
         period: Tuple[int, int],
-) -> Dict:
+    ) -> Dict:
     """
     You need to define all parameters in this function!!!
     The meaning of params refers to PreprocessStream class in preprocessors.py
@@ -34,7 +34,8 @@ def load_single_sample(file_absPath: str) -> np.ndarray:
 def preprocess_single_file(
         file_absPath: str, 
         output_folder: str, 
-        processor: PreprocessStream) -> None:
+        processor: PreprocessStream
+    ) -> None:
     """
     preprocess single file and save it in xytp form in a 1D ndarray.
     技巧: processor在外部实例化后,并行处理只需要实例化一次,减少时间开销
@@ -46,11 +47,16 @@ def preprocess_single_file(
     base_name = os.path.splitext(os.path.basename(file_absPath))[0]
     output_path = os.path.join(output_folder, f"{base_name}.npy")
     np.save(output_path, event_stream)
+    return output_path
 
-def parallel_preprocessing(input_folder: str, output_folder: str, meta: Dict):
+def parallel_preprocessing(
+        input_folder: str, 
+        output_folder: str, 
+        meta: Dict
+    ) -> None:
     """
     parallelly preprocess files in a single folder.
-    You can use a loop to traverse all input folders to realize process
+    You can use a loop to traverse all input folders to realize process\
         multiple folders.
     """
     all_files_absPath = [
