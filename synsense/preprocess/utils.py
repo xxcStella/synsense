@@ -51,14 +51,27 @@ def rename_files(folder_absPath: str, pose_mapping: dict) -> None:
         os.rename(old_path, new_absPath)
         print(f"重命名: {old_name}  -->  {new_name}")
 
-def batch_move_files(root: str, dst: str) -> None:
+def batch_move_files(root: str, dst: str, type: int) -> None:
     """
     Copy files from root folder to dst folder.
+
+    Params:
+        type (int):
+        * 1 means copy and paste every single file;
+        * 2 means clip and paste every single file;
+        * 3 means clip and paste the whole folder.
     """
     file_list = os.listdir(root)
-    for file in file_list:
-        file_absPath = os.path.join(root, file)
-        shutil.copy(file_absPath, dst)
+    if type == 1:
+        for file in file_list:
+            file_absPath = os.path.join(root, file)
+            shutil.copy(file_absPath, dst)
+    elif type == 2:
+        for file in file_list:
+            file_absPath = os.path.join(root, file)
+            shutil.move(file_absPath, dst)
+    elif type == 3:
+        shutil.move(root, dst)
     print("Finished.")
 
 def plot_spike_raster(
