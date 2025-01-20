@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]  # 指定构建工具依赖
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "synsense"  # 项目名称
+version = "0.1.0"  # 项目版本
+description = "Pipeline lib for Sinabs and deployment on board."
+authors = [
+    {name = "xxc", email = "xingchen.xu@bristol.ac.uk"}
+]
+# license = {file = "LICENSE"}  # 指定许可证
+# readme = "README.md"  # 项目说明文件
+requires-python = ">=3.8"  # 支持的 Python 版本
+
+# 项目依赖
+dependencies = [
+    "numpy>=1.20",
+    "torch>=1.10",
+]
+
+#[project.optional-dependencies]
+#dev = [
+#    "pytest>=6.0",
+#    "black>=22.0",
+#]
+
+[tool.setuptools.packages.find]
+where = ["."]
