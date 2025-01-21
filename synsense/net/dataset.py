@@ -56,7 +56,7 @@ class Dataset_Texture_Stream(Dataset):
     Params:
         data_list: list. Contains a list of data sample absolute path. All data are \
                 either training data or testing data. Cannot mix them.
-        device: str={'pc', 'speck'}. Dataset deplyed on PC or speck board.
+        platform: str={'pc', 'speck'}. Dataset deplyed on PC or speck board.
         gridsize: (int, int). The size of grid you want after dividing in grid. gs_x\
                 means row num, gs_y means column num.
         after_crop_size: Optional(int, int, int). For ToFrame function. It is the size of\
@@ -68,19 +68,19 @@ class Dataset_Texture_Stream(Dataset):
     def __init__(
             self,
             data_list: list,
-            device: str,
+            platform: str,
             gridsize: Tuple[int, int],
             after_crop_size: Optional[Tuple[int, int, int]]=None,
             n_time_bins: Optional[int]=None
         ) -> None:
         super().__init__()
         self.data_list = data_list
-        self.device = device
+        self.platform = platform
         self.gs_x, self.gs_y = gridsize
         self.after_crop_size = after_crop_size
         self.n_time_bins = n_time_bins
 
-    def divide_to_grid(self, data: np.ndarray) -> np.ndarray:
+    def _divide_to_grid(self, data: np.ndarray) -> np.ndarray:
         """
         Divide a single sample into gridsize matrix. Used in training phase (frames).
         If the data is not divisible, it will round to the closest integer.
@@ -152,7 +152,7 @@ class Dataset_Texture_Stream(Dataset):
         label = self.get_label(single_sample_absPath)
 
         # get the data of this sample
-        if self.device == "pc":
+        if self.platform == "pc":
             # transform stream data into frames to train
             frame_transform = ToFrame(
                 sensor_size=self.after_crop_size,
@@ -160,12 +160,12 @@ class Dataset_Texture_Stream(Dataset):
             )
             frames = frame_transform(data)
             # divide frames into gridsize data
-            grid_frames = self.divide_to_grid(frames)
+            grid_frames = self._divide_to_grid(frames)
             grid_frames = torch.from_numpy(grid_frames).float()   # dtype converted into torch.float32
 
             return grid_frames, label
         
-        elif self.device == "speck":
+        elif self.platform == "speck":
             H, W = data.shape[2:]
             box_x_size, box_y_size = H // self.gs_x, W // self.gs_y
             new_x = data['x'] // box_x_size
@@ -179,7 +179,7 @@ class Dataset_Texture_Stream(Dataset):
             return events, label
 
         else:
-            raise Exception("phase type error. Legal phases are: pc, speck.")
+            raise Exception("Platform type error. Legal platforms are: pc, speck.")
 
     def __len__(self):
         return len(self.data_list)
