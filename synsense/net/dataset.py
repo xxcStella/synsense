@@ -64,6 +64,8 @@ class Dataset_Texture_Stream(Dataset):
         n_time_bins: Optional(int). The param is for ToFrame function in tonic. Controls how\
                 many frames (slices) you want when deploying on PC. This param is\
                 optional, needed only when using PC.
+        sort_time (Optional[bool]): whether sort the time of the original data before\
+                training and testing.
     """
     def __init__(
             self,
@@ -71,7 +73,8 @@ class Dataset_Texture_Stream(Dataset):
             platform: str,
             gridsize: Tuple[int, int],
             after_crop_size: Optional[Tuple[int, int, int]]=None,
-            n_time_bins: Optional[int]=None
+            n_time_bins: Optional[int]=None,
+            sort_time: Optional[bool]=False
         ) -> None:
         super().__init__()
         self.data_list = data_list
@@ -79,6 +82,7 @@ class Dataset_Texture_Stream(Dataset):
         self.gs_x, self.gs_y = gridsize
         self.after_crop_size = after_crop_size
         self.n_time_bins = n_time_bins
+        self.sort_time = sort_time
 
     def _divide_to_grid(self, data: np.ndarray) -> np.ndarray:
         """
@@ -147,7 +151,10 @@ class Dataset_Texture_Stream(Dataset):
         single_sample_absPath = self.data_list[idx]
         with open(single_sample_absPath, 'rb') as f:
             data = np.load(f) # data should be event stream (xytp) in ascending order of 't'
-
+        
+        if self.sort_time:
+            data = np.sort(data, order='t')
+        
         # get the label of this sample
         label = self.get_label(single_sample_absPath)
 
@@ -166,7 +173,7 @@ class Dataset_Texture_Stream(Dataset):
             return grid_frames, label
         
         elif self.platform == "speck":
-            H, W = data.shape[2:]
+            H, W = self.after_crop_size[:2]
             box_x_size, box_y_size = H // self.gs_x, W // self.gs_y
             new_x = data['x'] // box_x_size
             new_y = data['y'] // box_y_size

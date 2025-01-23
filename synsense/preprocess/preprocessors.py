@@ -51,7 +51,7 @@ class PreprocessStream:
         for i in range(len(data)):
             if data[i]['x'] >= self.xmin and data[i]['x'] <= self.xmax \
                 and data[i]['y'] >= self.ymin and data[i]['y'] <= self.ymax and \
-                    data[i]['t'] >= self.tstart and data[i]['t'] <= self.tend:
+                    data[i]['t'] >= self.tstart and data[i]['t'] < self.tend:
                 
                 event_stream.append((
                     data[i]['x'] - self.xmin,

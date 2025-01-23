@@ -24,16 +24,6 @@ class AutoSNN():
     """
     def __init__(self, batch_size: int) -> None:
         self.batch_size = batch_size
-
-    @torch.no_grad()    
-    def _weights_init(m) -> None:
-        """
-        Initialize the model with Xavier method. Bias is set to 0 (bias is not used in Sinabs)
-        """
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
-            nn.init.xavier_uniform_(m.weight)
-            if m.bias is not None:
-                nn.init.zeros_(m.bias)
     
     def _single_train(
             self,
@@ -43,23 +33,30 @@ class AutoSNN():
             snn: sinabs.network.Network,
             device: str,
             timesteps: int,
-            optimizer: Optional[torch.optim.Optimizer]=torch.optim.Adam,
-            loss_fn: Optional[nn.Module]=nn.CrossEntropyLoss,
-            scheduler: Optional[torch.optim.lr_scheduler._LRScheduler]=torch.optim.lr_scheduler.StepLR
-        ) -> float:
+            optimizer: Optional[torch.optim.Optimizer],
+            loss_fn: Optional[nn.Module],
+            scheduler: Optional[torch.optim.lr_scheduler._LRScheduler],
+            _past_Kfold_max_acc: float
+        ) -> Tuple[float, sinabs.network.Network]:
         """
         Train a model without K-fold cross validation. The model with the highest accuracy
         will be saved in path given when initilizing the class.
 
+        Params:
+            _past_Kfold_max_acc (float): record past K-Folds highest accuracy. Automatically\
+                        obtain from the "train" function. You don't need to fill it.
+
         Return:
-            float. maximum classification accuracy in these epochs.
+            max_acc (float): maximum classification accuracy in these epochs.
+            best_snn (sinabs.network.Network): best snn in the whole single Fold.
         """
         snn.train()
+        max_acc = 0.0
+        best_snn = None
         for e in range(epochs):
             running_loss = 0.0
             cls_true_num = 0
             total_num = 0
-            max_acc = 0.0
 
             for _, (input, target) in enumerate(train_loader): # different batches
                 optimizer.zero_grad()
@@ -84,19 +81,24 @@ class AutoSNN():
 
             scheduler.step()    # update learning rate
 
-            # If reaches highest accuracy in this epoch, update max_acc and save the model
+            # If reaches highest accuracy in this epoch, update max_acc and
+            # save the model to best_snn to evaluate.
             current_acc = cls_true_num / total_num
-            if current_acc > max_acc:
+            if current_acc > max_acc: 
                 max_acc = current_acc
-                torch.save(snn, model_path)
+                best_snn = snn
+                # If reaches highest acc in the whole past kFolds, save
+                # the model to disk.
+                if current_acc >= _past_Kfold_max_acc:
+                    torch.save(snn, model_path)
 
             print(
-                f"epoch: {e}; Accuracy: {cls_true_num/total_num*100: .2f}%; \
-                  Loss: {running_loss: .2f}; current_lr: {scheduler.get_last_lr()[0]: .6f}"
+                f"epoch: {e}; Accuracy: {current_acc*100: .2f}%;"
+                f" Loss: {running_loss: .2f}; current_lr: {scheduler.get_last_lr()[0]: .6f}"
             )
 
         # return maxium accuracy during the whole epochs
-        return max_acc
+        return max_acc, best_snn
     
     def _single_validation(
             self,
@@ -140,10 +142,10 @@ class AutoSNN():
             device: str,
             k_folds: int,
             epochs: int,
-            optimizer: Optional[torch.optim.Optimizer]=torch.optim.Adam,
-            loss_fn: Optional[nn.Module]=nn.CrossEntropyLoss,
+            optimizer_class: Optional[torch.optim.Optimizer]=torch.optim.Adam,
+            loss_fn_class: Optional[nn.Module]=nn.CrossEntropyLoss,
             init_lr: Optional[float]=1e-3,
-            scheduler: Optional[torch.optim.lr_scheduler._LRScheduler]=torch.optim.lr_scheduler.StepLR,
+            scheduler_class: Optional[torch.optim.lr_scheduler._LRScheduler]=torch.optim.lr_scheduler.StepLR,
             step_size: Optional[int]=6,
             gamma: Optional[float]=0.1,   
         ) -> Tuple[list, list]:
@@ -175,26 +177,24 @@ class AutoSNN():
 
         fold_train_acc = []
         fold_test_acc  = []
+        _past_Kfold_max_acc = 0.0 # record the max acc in past folds
 
         # k fold cross validation loop
         for fold, (train_idx, val_idx) in enumerate(kfold.split(train_dataset)):
             print(f"K fold: {fold}")
 
-            # Initialize the model with Xavier method.
-            model.apply(self._weights_init)
-
             # Transfer ANN to SNN using Sinabs function from_model
             snn = from_model(
                 model=model,
                 input_shape=input_shape,  # (C, H, W)
-                batch_size=self.batch_size,
+                # batch_size=self.batch_size, # 不加此参数,由num_timesteps自动计算,后续batch大小可变
                 num_timesteps=timesteps, #(T)
                 add_spiking_output=True
-            ).to(self.device)
+            ).to(device)
 
-            optimizer = optimizer(snn.parameters(), init_lr)
-            loss_fn   = loss_fn()
-            scheduler = scheduler(optimizer, step_size=step_size, gamma=gamma)
+            optimizer = optimizer_class(snn.parameters(), init_lr)
+            loss_fn   = loss_fn_class()
+            scheduler = scheduler_class(optimizer, step_size=step_size, gamma=gamma)
 
             # Split the train set into training and validation sets
             train_sub = Subset(train_dataset, train_idx)
@@ -203,7 +203,7 @@ class AutoSNN():
             val_loader   = DataLoader(val_sub, batch_size=self.batch_size, drop_last=True)
 
             # Train current fold
-            max_acc = self._single_train(
+            max_acc, best_snn = self._single_train(
                     model_path=model_path,
                     train_loader=train_loader,
                     epochs=epochs,
@@ -212,12 +212,14 @@ class AutoSNN():
                     timesteps=timesteps,
                     optimizer=optimizer,
                     loss_fn=loss_fn,
-                    scheduler=scheduler   
+                    scheduler=scheduler,
+                    _past_Kfold_max_acc=_past_Kfold_max_acc
                 )
             fold_train_acc.append(max_acc)
+            if max_acc >= _past_Kfold_max_acc:
+                _past_Kfold_max_acc = max_acc
 
             # Validate current fold
-            best_snn = torch.load(model_path)
             val_acc = self._single_validation(
                     val_loader=val_loader,
                     snn=best_snn,
