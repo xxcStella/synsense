@@ -9,6 +9,27 @@ from sinabs.backend.dynapcnn import DynapcnnNetwork
 import samna
 from collections import Counter
 from typing import Tuple
+from functools import wraps
+
+# decorator, to measure the power of the board.
+def power_test(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        board = args[3]
+        power = board.get_power_monitor()
+        source = power.get_source_node()
+        sink = samna.graph.sink_from(source)
+
+        def get_events():
+            return sink.get_events()
+
+        power.start_auto_power_measurement(10.0)
+        func(*args, **kwargs)
+        power.stop_auto_power_measurement()
+        ps = get_events()
+
+        return ps
+    return wrapper
 
 class DeploySpeck:
     """
@@ -64,7 +85,8 @@ class DeploySpeck:
 
         return dynapcnn
 
-    def infer(self, dataset: Dataset, dynapcnn: DynapcnnNetwork) -> None:
+    @power_test
+    def infer(self, dataset: Dataset, dynapcnn: DynapcnnNetwork, board) -> None:
         """
         Infer on board.
         """
