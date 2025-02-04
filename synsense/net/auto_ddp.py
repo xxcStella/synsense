@@ -252,17 +252,22 @@ class AutoSNN():
             model: nn.Sequential,
             train_dataset: Dataset,
             device: str,
+
             k_folds: int,
             epochs: int,
             optimizer_class: Optional[torch.optim.Optimizer]=torch.optim.Adam,
             loss_fn_class: Optional[nn.Module]=nn.CrossEntropyLoss,
+
             init_lr: Optional[float]=1e-3,
             scheduler_class: Optional[torch.optim.lr_scheduler._LRScheduler]=torch.optim.lr_scheduler.StepLR,
             step_size: Optional[int]=6,
             gamma: Optional[float]=0.1,
+
             is_ddp: bool=False,    # 增加一个标志，是否使用DDP
             rank: int=0,           # 当前进程的 rank
-            world_size: int=1      # 总进程数
+            world_size: int=1,      # 总进程数
+
+            kwargs: Optional[dict]={}
         ) -> Tuple[list, list]:
         """
         Auto training function with K-fold cross validation.
@@ -308,7 +313,8 @@ class AutoSNN():
                 input_shape=input_shape,  # (C, H, W)
                 # batch_size=self.batch_size, # 不加此参数,由num_timesteps自动计算,后续batch大小可变
                 num_timesteps=timesteps, #(T)
-                add_spiking_output=True
+                add_spiking_output=True,
+                **kwargs
             ).to(device)
 
             optimizer = optimizer_class(snn.parameters(), init_lr)
@@ -391,8 +397,9 @@ class AutoSNN():
                     )
                 fold_test_acc.append(val_acc.item())
 
-        print(f"mean train acc: {sum(fold_train_acc)/len(fold_train_acc) :.2f}"
-              f" mean val acc: {sum(fold_test_acc)/len(fold_test_acc) :.2f}")
+        if rank == 0:
+            print(f"mean train acc: {sum(fold_train_acc)/len(fold_train_acc) :.4f}"
+                f" mean val acc: {sum(fold_test_acc)/len(fold_test_acc) :.4f}")
         return fold_train_acc, fold_test_acc
 
     def test(
