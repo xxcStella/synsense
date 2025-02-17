@@ -246,7 +246,7 @@ class AutoSNN():
             model_path (str): the path where your model stores.
             device (str): cpu or cuda.
         """
-        snn = torch.load(model_path)
+        snn = torch.load(model_path).to(device)
         timesteps = test_dataset[0][0].shape[0] 
         test_loader = DataLoader(test_dataset, self.batch_size, drop_last=True)
 

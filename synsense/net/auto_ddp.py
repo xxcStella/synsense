@@ -153,8 +153,8 @@ class AutoSNN():
             if isinstance(train_loader.sampler, DistributedSampler):
                 train_loader.sampler.set_epoch(e)
 
-            running_loss = 0.0
-            cls_true_num = 0
+            running_loss = torch.tensor(0.0).to(device)
+            cls_true_num = torch.tensor(0).to(device)
             total_num = 0
 
             for _, (input, target) in enumerate(train_loader): # different batches
@@ -353,7 +353,7 @@ class AutoSNN():
                     )
                 # 如果在 rank=0 上，就更新一下全局最优
                 if rank == 0:
-                    fold_train_acc.append(max_acc.item())
+                    fold_train_acc.append(max_acc)
                     if max_acc >= _past_Kfold_max_acc:
                         _past_Kfold_max_acc = max_acc
 
@@ -365,7 +365,7 @@ class AutoSNN():
                             device=device,
                             timesteps=timesteps
                         )
-                    fold_test_acc.append(val_acc.item())
+                    fold_test_acc.append(val_acc)
             # 单GPU版本
             else:
                 train_loader = DataLoader(train_sub, batch_size=self.batch_size, shuffle=True, drop_last=True)
@@ -416,7 +416,7 @@ class AutoSNN():
             model_path (str): the path where your model stores.
             device (str): cpu or cuda.
         """
-        snn = torch.load(model_path)
+        snn = torch.load(model_path).to(device)
         timesteps = test_dataset[0][0].shape[0] 
         test_loader = DataLoader(test_dataset, self.batch_size, drop_last=True)
 
