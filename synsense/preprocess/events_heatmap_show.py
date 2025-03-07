@@ -1,3 +1,9 @@
+"""
+This file is used to visualize the event data. It will generate 3 figures:
+pure heat map, spike raster plot, heat map after using SSIM method.
+All figures will be saved in current directory as of this file.
+"""
+
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt

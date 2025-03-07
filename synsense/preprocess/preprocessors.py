@@ -30,7 +30,10 @@ class PreprocessStream:
         ) -> None:
         self.gs_x, self.gs_y = gridsize
 
-        self.ymin, self.xmin = leftTop  # 这里的xmin等都是相对于numpy格式的,即x对应行数,y对应列数
+        # 这里的xmin等都是相对于numpy格式的,即x对应行数,y对应列数,反着写是因为DVXplorer相机
+        # 输出的xy和numpy的xy是反的,因此设定值前需要用events_heatmap_show文件进行查看原始相机
+        # 输出的坐标
+        self.ymin, self.xmin = leftTop  
         self.ymax, self.xmax = rightBottom
 
         self.tstart, self.tend = period
@@ -42,7 +45,7 @@ class PreprocessStream:
         Params:
             data (ndarray): event stream data. xytp, x means column, y means row.
 
-        Return:
+        Returns:
             event_stream: ndarray containing tuple with data type xytp.
         """
         event_stream = []

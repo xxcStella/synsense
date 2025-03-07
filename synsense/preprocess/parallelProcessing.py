@@ -37,7 +37,7 @@ def preprocess_single_file(
         processor: PreprocessStream
     ) -> None:
     """
-    preprocess single file and save it in xytp form in a 1D ndarray.
+    preprocess single file and save it in xytp form in a 1D ndarray.\\
     技巧: processor在外部实例化后,并行处理只需要实例化一次,减少时间开销
     """
     data_sample = load_single_sample(file_absPath)
