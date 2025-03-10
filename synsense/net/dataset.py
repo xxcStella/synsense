@@ -5,53 +5,14 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from sklearn.model_selection import train_test_split
 from tonic.transforms import ToFrame
 from typing import Tuple, Optional
 
-def split_data(root_folder_dir: str, train_size: float, random_seed: int=None):
+class Dataset_Stream_Base(Dataset):
     """
-    Split train and test data into 2 lists, each containing their absolute
-    paths.
-
-    If you want the whole folder to be training set (testing set), set train_size
-    =1 or 0.
-
-    root_folder_dir
-    |-Wool_0_folder
-    |  |-Wool_trial_0_on.npy
-    |  |-Wool_trial_1_on.npy
-    |-Canvas_1_folder
-    |-...
-    """
-    folder_list = os.listdir(root_folder_dir)
-    train_list = []
-    test_list  = []
-
-    for folder in folder_list:
-        # All folders' absolute paths
-        folder_absPath = os.path.join(root_folder_dir, folder)
-        # If the path is a directory, go on
-        if os.path.isdir(folder_absPath):
-            # 获取文件夹下所有npy文件的绝对路径列表
-            file_list = [
-                item.path for item in os.scandir(folder_absPath) if item.is_file()
-                ]
-            xtrain, xtest, _, _ = train_test_split(
-                file_list, 
-                np.zeros(len(file_list)), 
-                train_size, shuffle=True,
-                random_state=random_seed
-                )
-            train_list.extend(xtrain)
-            test_list.extend(xtest)
-    
-    return train_list, test_list
-
-class Dataset_Texture_Stream(Dataset):
-    """
+    Base class for stream-based dataset.
     This dataset is used to process event streams (xytp) into frames for PC training
-    and testing and into streams (xytp) for synsense speck board to infer.
+    and testing and into streams (xytp) for synsense speck2f board to infer.
 
     Params:
         data_list: list. Contains a list of data sample absolute path. All data are \
@@ -92,8 +53,8 @@ class Dataset_Texture_Stream(Dataset):
         Params:
             data: ndarry frame, (T, C, H, W).
         
-        Return:
-            ndarray frame. (T, C, gs_x, gs_y)
+        Returns:
+            trimmed_mat: ndarray frame. (T, C, gs_x, gs_y)
         """
         T, C, H, W = data.shape
         H_trimmed = (H // self.gs_x) * self.gs_x
@@ -107,7 +68,59 @@ class Dataset_Texture_Stream(Dataset):
         )
         trimmed_mat = trimmed_mat.sum(axis=(3, 5))
         return trimmed_mat
-    # np.allclose(mat_a, mat_b) # 用于测试两个矩阵是否相等,在大约1e-6误差内 
+    # np.allclose(mat_a, mat_b) # 用于测试两个矩阵是否相等,在大约1e-6误差内
+
+    def get_label(self, file_absPath: str) -> torch.Tensor:
+        """
+        Choose part of the file name to be the label.
+        This function can be modify according to user.
+
+        Params:
+            file_absPath: str. single sample's absolute path.
+
+        Return:
+            label: torch.long type. represent the label index.
+
+        eg. Wool_trial_x_on.npy will be Wool.
+        """
+        pass
+
+class Dataset_Texture_Stream(Dataset_Stream_Base):
+    """
+    This dataset is used to process event streams (xytp) into frames for PC training
+    and testing and into streams (xytp) for synsense speck board to infer.
+
+    Params:
+        data_list: list. Contains a list of data sample absolute path. All data are \
+                either training data or testing data. Cannot mix them.
+        platform: str={'pc', 'speck'}. Dataset deplyed on PC or speck board.
+        gridsize: (int, int). The size of grid you want after dividing in grid. gs_x\
+                means row num, gs_y means column num.
+        after_crop_size: Optional(int, int, int). For ToFrame function. It is the size of\
+                frames after cropping from the robot data. eg. (260, 260, 1)
+        n_time_bins: Optional(int). The param is for ToFrame function in tonic. Controls how\
+                many frames (slices) you want when deploying on PC. This param is\
+                optional, needed only when using PC.
+        sort_time (Optional[bool]): whether sort the time of the original data before\
+                training and testing.
+    """
+    def __init__(
+            self,
+            data_list: list,
+            platform: str,
+            gridsize: Tuple[int, int],
+            after_crop_size: Optional[Tuple[int, int, int]]=None,
+            n_time_bins: Optional[int]=None,
+            sort_time: Optional[bool]=False
+        ) -> None:
+        super().__init__(
+            data_list,
+            platform,
+            gridsize,
+            after_crop_size,
+            n_time_bins,
+            sort_time
+        )
 
     def get_label(self, file_absPath: str) -> torch.Tensor:
         """
