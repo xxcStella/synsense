@@ -63,7 +63,7 @@ class AutoSNN():
             _past_Kfold_max_acc (float): record past K-Folds highest accuracy. Automatically\
                         obtain from the "train" function. You don't need to fill it.
 
-        Return:
+        Returns:
             max_acc (float): maximum classification accuracy in these epochs.
             best_snn (sinabs.network.Network): best snn in the whole single Fold.
         """
@@ -398,6 +398,7 @@ class AutoSNN():
                 fold_test_acc.append(val_acc.item())
 
         if rank == 0:
+            print("")
             print(f"mean train acc: {sum(fold_train_acc)/len(fold_train_acc) :.4f}"
                 f" mean val acc: {sum(fold_test_acc)/len(fold_test_acc) :.4f}")
         return fold_train_acc, fold_test_acc

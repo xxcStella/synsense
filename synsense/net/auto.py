@@ -46,7 +46,7 @@ class AutoSNN():
             _past_Kfold_max_acc (float): record past K-Folds highest accuracy. Automatically\
                         obtain from the "train" function. You don't need to fill it.
 
-        Return:
+        Returns:
             max_acc (float): maximum classification accuracy in these epochs.
             best_snn (sinabs.network.Network): best snn in the whole single Fold.
         """
